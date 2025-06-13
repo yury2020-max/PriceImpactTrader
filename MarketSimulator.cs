@@ -13,12 +13,14 @@ namespace PriceImpactTrader
         public decimal VWAP => _vwapVolume > 0 ? _vwapTotal / _vwapVolume : 0m;
         private readonly List<string> _log = new();
         private readonly List<string> _priceHistory = new();
+        #pragma warning disable CS0414
         private bool _stopTriggered = false;
+        #pragma warning restore CS0414
 
         private decimal _vwapTotal = 0;
         private int _vwapVolume = 0;
         
-        // Новая система учета для правильного расчета PnL
+        // Calculation of PnL
         private decimal _totalBuyAmount = 0;
         private decimal _totalSellAmount = 0;
         private int _totalSharesBought = 0;
