@@ -45,3 +45,7 @@ pyvenv.cfg
 __pycache__/
 *.pyc
 *.png
+
+# Files
+OrderBookTest.cs
+PriceImpactTrader.csproj
