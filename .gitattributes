@@ -1,0 +1,13 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# C# files
+*.cs text diff=csharp
+*.csproj text
+*.sln text
+
+# JSON files
+*.json text
+
+# Markdown files
+*.md text

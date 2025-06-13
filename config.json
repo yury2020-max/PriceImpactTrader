@@ -1,0 +1,11 @@
+{
+  "Instrument": "PUM.DE",
+  "InitialPrice": 22.75,
+  "TargetVolume": 170000,
+  "CapitalLimit": 30000000,
+  "EnableTrapPhase": true,
+  "TrapSellVolume": 20000,
+  "TrapDropPercent": 0.5,
+  "StopLossPercent": 3.0,
+  "PriceImpactPerShare": 0.000011
+}
