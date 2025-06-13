@@ -5,137 +5,117 @@ from matplotlib.dates import DateFormatter
 import matplotlib.dates as mdates
 
 def create_price_volume_chart(csv_file_path='price_history.csv'):
-    """
-    Creates a price and volume chart from the price_history.csv file
-    """
+    df = pd.read_csv(csv_file_path)
 
-    # Read data from the CSV file created by the C# program
-    try:
-        # If the file has headers
-        df = pd.read_csv(csv_file_path)
-    except:
-        # If the file has no headers (only index and price)
-        df = pd.read_csv(csv_file_path, names=['Index', 'Price'])
+    # Создаем временные метки, если их нет
+    if 'Time' not in df.columns:
+        df['Time'] = pd.date_range(start='2024-01-01 09:30:00',
+                                   periods=len(df),
+                                   freq='1min')
 
-    # Generate volumes based on price changes (simulation)
-    df['Volume'] = generate_volume_from_price_changes(df['Price'])
-
-    # Create timestamps
-    df['Time'] = pd.date_range(start='2024-01-01 09:30:00',
-                               periods=len(df),
-                               freq='1min')
-
-    # Create a chart with two Y-axes
+    # График
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10),
                                    gridspec_kw={'height_ratios': [3, 1]})
 
-    # Price chart (upper)
+    # Цена
     ax1.plot(df['Time'], df['Price'],
              color='#1f77b4', linewidth=2, label='Price')
     ax1.set_ylabel('Price (EUR)', fontsize=12, fontweight='bold')
-    ax1.set_title('PUM.DE - Price Impact Trading Algorithm Results', 
+    ax1.set_title('PUM.DE - Price Impact Trading Algorithm Results',
                   fontsize=14, fontweight='bold')
     ax1.grid(True, alpha=0.3)
     ax1.legend()
 
-    # Highlight trading phases
+    # Фазы
     highlight_trading_phases(ax1, df)
-    
-    # Volume graph (bottom)
+
+    # Объем
     colors = ['green' if vol > 0 else 'red' for vol in df['Volume']]
-    ax2.bar(df['Time'], abs(df['Volume']), 
+    ax2.bar(df['Time'], abs(df['Volume']),
             color=colors, alpha=0.7, width=0.0006)
     ax2.set_ylabel('Volume', fontsize=12, fontweight='bold')
     ax2.set_xlabel('Time', fontsize=12, fontweight='bold')
     ax2.grid(True, alpha=0.3)
 
-    # Time formatting
+    # Формат времени
     formatter = DateFormatter('%H:%M')
     ax1.xaxis.set_major_formatter(formatter)
     ax2.xaxis.set_major_formatter(formatter)
-
-    # Rotate time labels
     plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45)
-    
-    plt.tight_layout()
-    plt.show()
 
-    # Save the chart
+    plt.tight_layout()
     plt.savefig('price_volume_analysis.png', dpi=300, bbox_inches='tight')
-    print("Chart saved as 'price_volume_analysis.png'")
+    plt.show()
+    print("График сохранен как 'price_volume_analysis.png'")
 
 def generate_volume_from_price_changes(prices):
     """
-    Generates volumes based on price changes
+    Генерирует объемы на основе изменений цены
     """
     volumes = []
     
     for i in range(len(prices)):
         if i == 0:
-            volumes.append(1000)  # Initial volume
+            volumes.append(1000)  # Начальный объем
         else:
             price_change = abs(prices[i] - prices[i-1])
-
-            # Large price changes = higher volume
-            if price_change > 0.05:  # Large trade
+            
+            # Большие изменения цены = больший объем
+            if price_change > 0.05:  # Крупная сделка
                 volume = np.random.randint(8000, 15000)
-            elif price_change > 0.01:  # Medium trade
+            elif price_change > 0.01:  # Средняя сделка
                 volume = np.random.randint(3000, 8000)
-            else:  # Small trade
+            else:  # Мелкая сделка
                 volume = np.random.randint(500, 3000)
-
-            # Positive volume for price increases, negative for decreases
+            
+            # Положительный объем для роста цены, отрицательный для падения
             if prices[i] > prices[i-1]:
-                volumes.append(volume)  # Buys
+                volumes.append(volume)  # Покупки
             else:
-                volumes.append(-volume)  # Sells
-
+                volumes.append(-volume)  # Продажи
+    
     return volumes
 
 def highlight_trading_phases(ax, df):
-    """
-    Highlights trading phases on the chart
-    """
-    total_points = len(df)
+    df['PhaseChange'] = df['Phase'] != df['Phase'].shift()
+    phase_changes = df[df['PhaseChange']].copy()
+    phase_changes = pd.concat([phase_changes, df.iloc[[-1]]])
 
-    # Approximate phase boundaries (can be adjusted)
-    phase1_end = int(total_points * 0.3)    # Phase 1: 30%
-    phase2_end = int(total_points * 0.4)    # Phase 2: 10%
-    phase3_end = int(total_points * 0.7)    # Phase 3: 30%
-    # Phase 4: remaining 30%
+    for i in range(1, len(phase_changes)):
+        phase_name = phase_changes['Phase'].iloc[i-1]
+        x_pos = df['Time'].iloc[phase_changes.index[i]]
 
-    # Add vertical lines to separate phases
-    ax.axvline(x=df['Time'].iloc[phase1_end], color='red', linestyle='--', alpha=0.7)
-    ax.axvline(x=df['Time'].iloc[phase2_end], color='orange', linestyle='--', alpha=0.7)
-    ax.axvline(x=df['Time'].iloc[phase3_end], color='purple', linestyle='--', alpha=0.7)
+        colors = {
+            'Phase1': 'red',
+            'Phase2': 'orange',
+            'Phase3': 'purple',
+            'Phase4': 'green'
+        }
 
-    # Add phase labels
-    ax.text(df['Time'].iloc[int(phase1_end/2)], df['Price'].max(),
-            'Phase 1\nAccumulation', ha='center', va='top',
-            bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.7))
-    
-    ax.text(df['Time'].iloc[phase1_end + int((phase2_end-phase1_end)/2)], 
-            df['Price'].max(), 'Phase 2\nTrap', ha='center', va='top',
-            bbox=dict(boxstyle='round', facecolor='lightcoral', alpha=0.7))
-    
-    ax.text(df['Time'].iloc[phase2_end + int((phase3_end-phase2_end)/2)], 
-            df['Price'].max(), 'Phase 3\nImpulse', ha='center', va='top',
-            bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.7))
-    
-    ax.text(df['Time'].iloc[phase3_end + int((total_points-phase3_end)/2)], 
-            df['Price'].max(), 'Phase 4\nExit', ha='center', va='top',
-            bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.7))
+        color = colors.get(phase_name, 'gray')
+        ax.axvline(x=x_pos, color=color, linestyle='--', alpha=0.7)
+
+        start_idx = phase_changes.index[i-1]
+        end_idx = phase_changes.index[i]
+        mid_idx = start_idx + (end_idx - start_idx) // 2
+        mid_time = df['Time'].iloc[mid_idx]
+
+        ax.text(mid_time, df['Price'].max(), phase_name, ha='center', va='top',
+                bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.5))
+
+    df.drop(columns='PhaseChange', inplace=True)
+
 
 def analyze_trading_performance(csv_file_path='price_history.csv'):
     """
-    Analyzes the performance of the trading algorithm
+    Анализирует производительность торгового алгоритма
     """
     try:
         df = pd.read_csv(csv_file_path)
     except:
         df = pd.read_csv(csv_file_path, names=['Index', 'Price'])
-
-    # Basic statistics
+    
+    # Базовая статистика
     start_price = df['Price'].iloc[0]
     end_price = df['Price'].iloc[-1]
     max_price = df['Price'].max()
@@ -153,41 +133,43 @@ def analyze_trading_performance(csv_file_path='price_history.csv'):
 if __name__ == "__main__":
     import os
     
+    create_price_volume_chart('price_history.csv')
+    
     print("=== Диагностика ===")
     print(f"Текущая папка: {os.getcwd()}")
     
-    # Looking for the file in different places
+    # Ищем файл в разных местах
     csv_paths = [
-        'price_history.csv',           # In the current folder
-        '../price_history.csv',        # In the parent folder
-        '../bin/Debug/net8.0/price_history.csv'  # In the build folder
+        'price_history.csv',           # В текущей папке
+        '../price_history.csv',        # В родительской папке
+        '../bin/Debug/net8.0/price_history.csv'  # В папке сборки
     ]
     
     csv_file = None
     for path in csv_paths:
         if os.path.exists(path):
             csv_file = path
-            print(f"Found file: {path}")
+            print(f"Найден файл: {path}")
             break
     
     if not csv_file:
-        print("ERROR: price_history.csv not found!")
-        print("Please run the C# program first: dotnet run")
-        print(f"Looked in: {csv_paths}")
+        print("ОШИБКА: price_history.csv не найден!")
+        print("Сначала запустите C# программу: dotnet run")
+        print(f"Искал в: {csv_paths}")
         exit(1)
-
-    print(f"Using file: {csv_file}")
-
+    
+    print(f"Использую файл: {csv_file}")
+    
     try:
-        print("\nCreating price and volume chart...")
+        print("\nСоздание графика цены и объема...")
         create_price_volume_chart(csv_file)
-
-        print("\nAnalyzing performance...")
+        
+        print("\nАнализ производительности...")
         analyze_trading_performance(csv_file)
-
-        print("\n Analysis completed successfully!")
-
+        
+        print("\n✅ Анализ завершен успешно!")
+        
     except Exception as e:
-        print(f"\n Error: {e}")
-        print("Please ensure all dependencies are installed:")
+        print(f"\n❌ Ошибка: {e}")
+        print("Проверьте, что установлены все зависимости:")
         print("uv pip install pandas matplotlib numpy")

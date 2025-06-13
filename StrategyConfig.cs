@@ -13,9 +13,9 @@ namespace PriceImpactTrader
 
         public bool EnableTrapPhase { get; set; } = true;
         public int TrapSellVolume { get; set; } = 20000;
-        public decimal TrapDropPercent { get; set; } = 0.5m; // Percentage of trapped price drop
+        public decimal TrapDropPercent { get; set; } = 1.5m; // Percentage of trapped price drop
         public decimal StopLossPercent { get; set; } = 3.0m;
-        public decimal PriceImpactPerShare { get; set; } = 0.000011m;
+        public decimal PriceImpactPerShare { get; set; } = 0.000015m;
         public static StrategyConfig Load(string path)
         {
             var json = File.ReadAllText(path);

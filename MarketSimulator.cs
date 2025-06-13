@@ -9,10 +9,11 @@ namespace PriceImpactTrader
         private readonly StrategyConfig _config;
         public decimal CurrentPrice { get; set; }
         public decimal LastTrapSellStartPrice { get; set; }
-        public decimal LastPassiveBuyPrice { get; set; } // Tracking your last passive purchase
+        public decimal LastPassiveBuyPrice { get; set; }
         public decimal VWAP => _vwapVolume > 0 ? _vwapTotal / _vwapVolume : 0m;
         private readonly List<string> _log = new();
         private readonly List<string> _priceHistory = new();
+        private int _timeStep = 0; // Добавляем счетчик времени
         #pragma warning disable CS0414
         private bool _stopTriggered = false;
         #pragma warning restore CS0414
@@ -25,13 +26,17 @@ namespace PriceImpactTrader
         private decimal _totalSellAmount = 0;
         private int _totalSharesBought = 0;
         private int _totalSharesSold = 0;
+        
+        // Отдельно для стоп-ордеров
+        private decimal _stopOrderAmount = 0;
+        private int _stopOrderShares = 0;
 
         public MarketSimulator(StrategyConfig config)
         {
             _config = config;
             CurrentPrice = config.InitialPrice;
-            LastPassiveBuyPrice = config.InitialPrice; // Initialize
-            _priceHistory.Add("TimeStep,Price");
+            LastPassiveBuyPrice = config.InitialPrice;
+            _priceHistory.Add("TimeStep,Price,Volume,Phase,Action");
         }
 
         public void Log(string message)
@@ -50,7 +55,10 @@ namespace PriceImpactTrader
             LastPassiveBuyPrice = price;
             CurrentPrice = price;
             Log($"BUY {volume} @ {price:F2}");
-            _priceHistory.Add($"{_priceHistory.Count},{price:F2}");
+            
+            // Фаза 1: спокойное накопление - цена меняется медленно
+            _timeStep++;
+            _priceHistory.Add($"{_timeStep},{price:F2},{volume},Phase1,PassiveBuy");
         }
 
         public void ExecuteBuy(int volume)
@@ -68,33 +76,112 @@ namespace PriceImpactTrader
 
         public void ExecuteSell(int volume, out decimal avgSellPrice)
         {
-            decimal priceImpact = _config.PriceImpactPerShare * volume;
-            CurrentPrice -= priceImpact;
-            avgSellPrice = CurrentPrice;
-            decimal amount = volume * CurrentPrice;
+            // Phase 4: постепенная ликвидация с падением цены
+            decimal totalPriceImpact = _config.PriceImpactPerShare * volume;
+            decimal startPrice = CurrentPrice;
+            decimal endPrice = CurrentPrice - totalPriceImpact;
+            
+            avgSellPrice = startPrice - (totalPriceImpact / 2);
+            CurrentPrice = endPrice;
+            
+            // Записываем падение цены
+            _timeStep++;
+            _priceHistory.Add($"{_timeStep},{avgSellPrice:F2},{-volume},Phase4,Exit");
+            
+            decimal amount = volume * avgSellPrice;
             _totalSellAmount += amount;
             _totalSharesSold += volume;
-            Log($"SELL {volume} @ {CurrentPrice:F2}");
-            _priceHistory.Add($"{_priceHistory.Count},{CurrentPrice:F2}");
+            
+            Log($"SELL {volume} @ {avgSellPrice:F2}");
         }
 
-        public void ExecuteBuyAtPrice(int volume, decimal price)
+        public void ExecuteBuyAtPrice(int volume, decimal targetPrice)
         {
-            CurrentPrice = price;
-            decimal amount = volume * price;
+            // Для Phase 3: показываем рост цены от покупок
+            decimal startPrice = CurrentPrice;
+            decimal totalPriceImpact = _config.PriceImpactPerShare * volume;
+            decimal endPrice = targetPrice;
+            
+            // Записываем рост цены
+            _timeStep++;
+            _priceHistory.Add($"{_timeStep},{endPrice:F2},{volume},Phase3,ImpulseBuy");
+            
+            CurrentPrice = endPrice;
+            
+            decimal amount = volume * targetPrice;
             _totalBuyAmount += amount;
             _totalSharesBought += volume;
             _vwapTotal += amount;
             _vwapVolume += volume;
-            Log($"BUY {volume} @ {price:F2} (triggered)");
-            _priceHistory.Add($"{_priceHistory.Count},{price:F2}");
+            
+            Log($"BUY {volume} @ {targetPrice:F2} (impulse)");
+        }
+
+        // Специальный метод для Phase 2 Trap - показывает реальное движение цены
+        public void ExecuteTrapSell(int volume, decimal startPrice, decimal endPrice, out decimal avgSellPrice)
+        {
+            avgSellPrice = (startPrice + endPrice) / 2;
+            
+            // Записываем несколько точек для показа падения цены
+            int steps = 5;
+            decimal priceStep = (startPrice - endPrice) / steps;
+            
+            for (int i = 0; i <= steps; i++)
+            {
+                decimal stepPrice = startPrice - (priceStep * i);
+                _timeStep++;
+                _priceHistory.Add($"{_timeStep},{stepPrice:F2},{volume/steps},Phase2,TrapSell");
+            }
+            
+            CurrentPrice = endPrice;
+            
+            decimal amount = volume * avgSellPrice;
+            _totalSellAmount += amount;
+            _totalSharesSold += volume;
+            
+            Log($"SELL {volume} @ {avgSellPrice:F2}");
+        }
+
+        // Специальный метод для Phase 2 Trap buyback - показывает восстановление цены
+        public void ExecuteTrapBuyback(int volume, decimal triggerPrice, decimal endPrice, out decimal avgBuyPrice)
+        {
+            avgBuyPrice = (triggerPrice + endPrice) / 2;
+            
+            // Записываем несколько точек для показа восстановления цены
+            int steps = 3;
+            decimal priceStep = (endPrice - triggerPrice) / steps;
+            
+            for (int i = 0; i <= steps; i++)
+            {
+                decimal stepPrice = triggerPrice + (priceStep * i);
+                _timeStep++;
+                _priceHistory.Add($"{_timeStep},{stepPrice:F2},{volume/steps},Phase2,TrapBuy");
+            }
+            
+            CurrentPrice = endPrice;
+            
+            decimal amount = volume * avgBuyPrice;
+            _totalBuyAmount += amount;
+            _totalSharesBought += volume;
+            _vwapTotal += amount;
+            _vwapVolume += volume;
+            
+            Log($"BUY {volume} @ {triggerPrice:F2} (triggered)");
         }
 
         public void ExecuteStopOrderSale(int volume, decimal price)
         {
+            // Учитываем стоп-ордера отдельно
             decimal amount = volume * price;
-            _totalSellAmount += amount;
-            _totalSharesSold += volume;
+            _stopOrderAmount += amount;
+            _stopOrderShares += volume;
+            
+            // Записываем пиковую цену
+            _timeStep++;
+            _priceHistory.Add($"{_timeStep},{price:F2},{volume},Phase3,StopOrders");
+            
+            CurrentPrice = price;
+            
             Log($"STOP ORDER SALE: {volume} @ {price:F2} (others bought from us)");
         }
 
@@ -116,33 +203,44 @@ namespace PriceImpactTrader
 
         public void GenerateReport()
         {
-            // Calculation of PnL
-            decimal totalRevenue = _totalSellAmount;
+            decimal totalRevenue = _totalSellAmount + _stopOrderAmount; // Включаем стоп-ордера в доходы
             decimal totalCosts = _totalBuyAmount;
             decimal netPnL = totalRevenue - totalCosts;
             
-            int netPosition = _totalSharesBought - _totalSharesSold;
+            int netPosition = _totalSharesBought - _totalSharesSold - _stopOrderShares; // Вычитаем стоп-ордера
             decimal avgBuyPrice = _totalSharesBought > 0 ? _totalBuyAmount / _totalSharesBought : 0;
-            decimal avgSellPrice = _totalSharesSold > 0 ? _totalSellAmount / _totalSharesSold : 0;
+            decimal avgSellPrice = (_totalSharesSold + _stopOrderShares) > 0 ? 
+                                   (totalRevenue) / (_totalSharesSold + _stopOrderShares) : 0;
             
             Log($"=== TRADING SUMMARY ===");
             Log($"Total Shares Bought: {_totalSharesBought:N0}");
-            Log($"Total Shares Sold: {_totalSharesSold:N0}");
+            Log($"Total Shares Sold (regular): {_totalSharesSold:N0}");
+            Log($"Stop Order Sales: {_stopOrderShares:N0}");
+            Log($"Total Shares Sold (all): {(_totalSharesSold + _stopOrderShares):N0}");
             Log($"Net Position: {netPosition:N0} shares");
             Log($"Average Buy Price: {avgBuyPrice:F4}");
             Log($"Average Sell Price: {avgSellPrice:F4}");
             Log($"Total Money Spent: {totalCosts:F2} EUR");
             Log($"Total Money Received: {totalRevenue:F2} EUR");
+            Log($"  - Regular Sales: {_totalSellAmount:F2} EUR");
+            Log($"  - Stop Order Sales: {_stopOrderAmount:F2} EUR");
             Log($"Net P&L: {netPnL:F2} EUR");
             Log($"Final VWAP: {VWAP:F2}");
             
-            // If there are any shares left, we count them at the current price
             if (netPosition > 0)
             {
                 decimal unrealizedValue = netPosition * CurrentPrice;
                 decimal totalPnL = netPnL + unrealizedValue - (netPosition * avgBuyPrice);
                 Log($"Unrealized Position Value: {unrealizedValue:F2} EUR");
                 Log($"Total P&L (including unrealized): {totalPnL:F2} EUR");
+            }
+            else if (netPosition == 0)
+            {
+                Log($"✅ Position fully liquidated - No unrealized P&L");
+            }
+            else
+            {
+                Log($"⚠️  Negative position detected - Check calculations!");
             }
             
             File.WriteAllLines("simulation_log.txt", _log);
