@@ -32,5 +32,16 @@ Thumbs.db
 *.tmp
 *.temp
 
-# Files
-OrderBook.cs
+# Virtual environments
+.env
+.venv
+env/
+venv/
+test_venv/
+ENV/
+env.bak/
+venv.bak/
+pyvenv.cfg
+__pycache__/
+*.pyc
+*.png

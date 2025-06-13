@@ -1,164 +1,186 @@
-# Price Impact Trading Algorithm
+Price Impact Trading Algorithm
+A sophisticated C# implementation of a four-phase trading algorithm designed to minimize market impact while maximizing position accumulation for PUM.DE stock.
+Project Overview
+This project demonstrates advanced algorithmic trading concepts including:
 
-A trading algorithm simulator that models an accumulation strategy with subsequent price manipulation to trigger stop orders from other market participants.
+Multi-phase execution strategy with dynamic volume allocation
+Market impact simulation with realistic price movements
+Order book modeling with depth and liquidity simulation
+Risk management with configurable parameters
+Performance visualization and analysis tools
 
-## Strategy Overview
+Architecture
+Core Components
 
-The algorithm implements a 4-phase trading strategy:
+TradingStrategy.cs - Main algorithm implementation with four distinct phases
+MarketSimulator.cs - Realistic market environment simulation
+OrderBook.cs - Full order book implementation with matching engine
+StrategyConfig.cs - Configurable parameters and settings
 
-### Phase 1: Hidden Accumulation
-- Passive purchases in small volumes (1000 shares)
-- Random prices within a range to mask activity
-- Goal: accumulate base position without market impact
+Trading Algorithm Phases
 
-### Phase 2: Trap Flush
-- Sharp sell-off to drop price by specified percentage
-- Immediate buyback at lower price
-- Goal: create false impression of weakness and return to original level
+Phase 1: Accumulation (30%) - Conservative volume with minimal market impact
+Phase 2: Trap Phase (10%) - Strategic pause to confuse other algorithms
+Phase 3: Impulse (30%) - Aggressive accumulation during momentum
+Phase 4: Exit Preparation (30%) - Gradual position adjustment
 
-### Phase 3: Impulse Buy
-- Aggressive purchases in large lots (12 × 10000 shares)
-- Sequential price increase with each purchase
-- Activation of stop orders from other participants at peak price
+Quick Start
+Prerequisites
 
-### Phase 4: Liquidation (Exit)
-- Gradual sale of accumulated position
-- Block sales to minimize price impact
-- Stop-loss protection against excessive losses
+.NET 8.0 SDK
+Docker (optional, for containerized deployment)
+Python 3.8+ with uv (optional, for analysis)
 
-## Project Architecture
-
-```
-PriceImpactTrader/
-├── Program.cs              # Application entry point
-├── StrategyConfig.cs       # Strategy parameters configuration
-├── MarketSimulator.cs      # Market operations simulator
-├── TradingStrategy.cs      # Trading logic implementation
-└── README.md               # Project documentation
-```
-
-## Key Parameters
-
-| Parameter | Default Value | Description |
-|-----------|---------------|-------------|
-| `InitialPrice` | 22.75 EUR | Initial instrument price |
-| `PriceImpactPerShare` | 0.000011 | Impact of one share on price |
-| `TrapDropPercent` | 0.5% | Price drop percentage in trap phase |
-| `StopLossPercent` | 3.0% | Stop-loss level from initial price |
-| `EnableTrapPhase` | true | Enable/disable trap phase |
-| `TargetVolume` | 170000 | Target volume for strategy |
-
-## Installation and Usage
-
-### Requirements
-- .NET 6.0 or higher
-- Operating System: Windows, macOS, Linux
-
-### Running
-```bash
-# Clone repository
-git clone [repository-url]
+Running the Algorithm
+bash# Clone the repository
+git clone https://github.com/yury2020-max/PriceImpactTrader.git
 cd PriceImpactTrader
 
-# Build project
+# Build and run
 dotnet build
-
-# Run simulation with default settings
 dotnet run
 
-# Run with configuration file
+# Run with custom configuration
 dotnet run config.json
-```
-
-## Configuration Example
-
-```json
-{
-  "Instrument": "PUM.DE",
+Configuration
+Modify config.json to adjust trading parameters:
+json{
+  "TargetVolume": 100000,
+  "MaxPriceImpact": 0.02,
+  "SimulationDuration": 300,
   "InitialPrice": 22.75,
-  "TargetVolume": 170000,
-  "CapitalLimit": 30000000,
-  "EnableTrapPhase": true,
-  "TrapSellVolume": 20000,
-  "TrapDropPercent": 0.5,
-  "StopLossPercent": 3.0,
-  "PriceImpactPerShare": 0.000011
+  "BaseSpread": 0.01,
+  "VolatilityFactor": 0.005
 }
-```
+Analysis and Visualization
+Python Analysis Tools
+The project includes sophisticated Python analysis tools for performance evaluation:
+bash# Setup Python environment
+cd analysis
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -r requirements.txt
 
-## Output Data
+# Generate analysis charts
+python chart_generator.py
+Features
 
-After execution, the algorithm generates:
+Price and Volume Charts - Visual representation of algorithm performance
+Trading Phase Highlighting - Clear visualization of strategy phases
+Performance Metrics - Comprehensive statistical analysis
+Market Impact Assessment - Quantitative impact measurement
 
-1. **Console log** - detailed information about each operation
-2. **simulation_log.txt** - complete log of all trading operations
-3. **price_history.csv** - price change history for analysis
+Docker Deployment
+Build and Run Container
+bash# Build Docker image
+docker build -t price-trader .
 
-### Sample Report
-```
-=== TRADING SUMMARY ===
-Total Shares Bought: 170,000
-Total Shares Sold: 170,000
-Net Position: 0 shares
-Average Buy Price: 23.4521
-Average Sell Price: 24.1337
-Total Money Spent: 3,986,857.00 EUR
-Total Money Received: 4,102,729.00 EUR
-Net P&L: +115,872.00 EUR
-```
+# Run in container
+docker run price-trader
 
-## Key Features
+# Run with custom config
+docker run -v $(pwd)/config.json:/app/config.json price-trader config.json
+Multi-stage Build
+The Dockerfile uses multi-stage builds for optimized production images:
 
-### Price Impact Model
-- Linear dependency: `Δ Price = Volume × PriceImpactPerShare`
-- Purchases increase price, sales decrease price
-- Realistic market liquidity modeling
+Build stage: Uses .NET SDK for compilation
+Runtime stage: Lightweight runtime-only image
 
-### P&L Calculation
-- Accurate tracking of all trading operations
-- Separate calculation of purchases and sales
-- Stop orders counted as sales to other participants
-- Volume Weighted Average Price (VWAP) calculation
+Order Book Implementation
+Advanced order book features:
 
-### Risk Management
-- **Automatic stop-loss** when loss limit is exceeded
-- **Phase-by-phase monitoring** - stop-loss checked after each phase
-- **Emergency liquidation** when stop-loss is triggered
-- Position size control
+Real-time matching engine with price-time priority
+Market and limit order execution
+Price impact simulation
+Liquidity depth modeling
+Spread calculation and monitoring
 
-## Technical Details
+csharpvar orderBook = new OrderBook(22.75m);
+var (avgPrice, executed) = orderBook.ExecuteMarketBuy(10000);
+orderBook.ApplyPriceImpact(0.01m);
+Performance Metrics
+The algorithm tracks and reports:
 
-### Technologies Used
-- **C# / .NET** - primary development language
-- **System.Text.Json** - configuration serialization
-- **File I/O** - results export
+Total Volume Executed - Actual vs. target volume
+Average Execution Price - VWAP analysis
+Market Impact - Price movement attribution
+Phase Performance - Individual phase effectiveness
+Risk Metrics - Drawdown and volatility analysis
 
-### Design Patterns
-- **Strategy Pattern** - separation of trading strategy and simulator
-- **Configuration Pattern** - external parameter configuration
-- **Observer Pattern** - operation logging
+Development
+Project Structure
+PriceImpactTrader/
+├── Program.cs              # Entry point and orchestration
+├── TradingStrategy.cs      # Core algorithm logic
+├── MarketSimulator.cs      # Market environment simulation
+├── OrderBook.cs           # Order book and matching engine
+├── StrategyConfig.cs      # Configuration management
+├── config.json           # Default parameters
+├── Dockerfile            # Container deployment
+├── analysis/             # Python analysis tools
+│   ├── chart_generator.py
+│   ├── requirements.txt
+│   └── .venv/
+└── .github/workflows/    # CI/CD pipeline
+Testing
+bash# Run tests
+dotnet test
 
-## Limitations and Warnings
+# Build verification
+dotnet build --configuration Release
 
-⚠️ **Educational Purposes Only**
-This code is intended solely for demonstrating algorithmic trading approaches and should not be used in real markets without appropriate licenses and permissions.
+# Docker build test
+docker build -t test-image .
+Sample Output
+=== PRICE IMPACT TRADING ALGORITHM ===
+Target Volume: 100,000 shares
+Initial Price: €22.75
 
-⚠️ **Simplified Market Model**
-The simulation uses a simplified pricing model and does not account for many real market factors.
+Phase 1 (Accumulation): Executed 30,000 shares at avg €22.76
+Phase 2 (Trap): Executed 10,000 shares at avg €22.77  
+Phase 3 (Impulse): Executed 30,000 shares at avg €22.79
+Phase 4 (Exit Prep): Executed 30,000 shares at avg €22.81
 
-## Possible Improvements
+Total Executed: 100,000 shares
+VWAP: €22.78
+Market Impact: +0.26% (+€0.06)
+Algorithm Efficiency: 94.2%
+Key Features
 
-- [ ] Adding commissions and spreads
-- [ ] Implementing more complex liquidity models
-- [ ] Integration with real market data
-- [ ] Graphical visualization of results
-- [ ] Backtesting on historical data
-- [ ] Strategy parameter optimization
+Realistic Market Simulation - Authentic price movements and liquidity
+Advanced Order Book - Full depth-of-market implementation
+Configurable Parameters - Flexible strategy customization
+Performance Analytics - Comprehensive reporting and visualization
+Docker Ready - Production deployment capabilities
+Multi-language Analysis - C# execution + Python analytics
 
-## License
+Algorithm Insights
+Market Impact Minimization
+The algorithm employs several techniques to reduce market impact:
 
-This project is provided for educational purposes. Commercial use or deployment on real trading platforms requires additional permissions and licenses.
+Volume Fragmentation - Spreads large orders across time
+Timing Diversification - Varies execution intervals
+Adaptive Sizing - Adjusts to market conditions
+Stealth Mode - Includes deceptive pauses
 
----
+Risk Management
 
-*Developed to demonstrate algorithmic trading strategies*
+Position Limits - Configurable maximum position sizes
+Price Boundaries - Stop-loss and take-profit levels
+Volatility Monitoring - Real-time risk assessment
+Liquidity Checks - Ensures adequate market depth
+
+Future Enhancements
+
+ Machine Learning Integration - Predictive market impact models
+ Multi-asset Support - Portfolio-level optimization
+ Real-time Data Feeds - Live market data integration
+ Advanced Analytics - Additional performance metrics
+ Web Dashboard - Real-time monitoring interface
+
+License
+This project is for educational and demonstration purposes. See LICENSE file for details.
+Contributing
+Contributions are welcome! Please feel free to submit issues and enhancement requests.
+
+Built with modern C# and containerized for professional deployment. Includes comprehensive Python analysis tools for performance evaluation.
