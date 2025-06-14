@@ -9,7 +9,7 @@
       "version": "3.13"
     }
   },
-  "postCreateCommand": "python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt",
+  "postCreateCommand": "pip install -r requirements.txt",
   "customizations": {
     "vscode": {
       "extensions": [
