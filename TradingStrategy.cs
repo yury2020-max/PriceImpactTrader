@@ -185,7 +185,7 @@ namespace PriceImpactTrader
             decimal startPrice = _simulator.CurrentPrice;
             _simulator.Log($"Starting complete liquidation from peak price: {startPrice:F2}");
 
-            // Корректный расчет фактически купленного объема
+            // calculation of actually purchased volume
             int phase1Volume = (int)(_config.TargetVolume * 0.40m);  // Phase 1: +40%
             int phase3Volume = (int)(_config.TargetVolume * 0.60m);
             int lotSize = 10000;
@@ -252,7 +252,7 @@ namespace PriceImpactTrader
             _simulator.Log($"Actually sold: {totalSoldInPhase4:N0} shares");
             _simulator.Log($"Difference: {totalSoldInPhase4 - totalPortfolio:N0} shares");
             _simulator.Log($"Price movement during liquidation: {startPrice:F2} -> {endPrice:F2} ({totalPriceMovement:F2})");
-            _simulator.Log($"Final position: 0 shares ✅");
+            _simulator.Log($"Final position: 0 shares");
         }
     }
 }    
