@@ -1,15 +1,20 @@
 {
-  "name": "C# (.NET)",
-  "image": "mcr.microsoft.com/devcontainers/dotnet:latest",
+  "name": "C# (.NET) + Python",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:9.0",
   "features": {
     "ghcr.io/devcontainers/features/dotnet:2": {
       "version": "9.0"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.13"
     }
   },
+  "postCreateCommand": "python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt",
   "customizations": {
     "vscode": {
       "extensions": [
-        "ms-dotnettools.csharp"
+        "ms-dotnettools.csharp",
+        "ms-python.python"
       ]
     }
   }
