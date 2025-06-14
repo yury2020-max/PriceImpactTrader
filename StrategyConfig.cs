@@ -7,7 +7,7 @@ namespace PriceImpactTrader
     public class StrategyConfig
     {
         public string Instrument { get; set; } = "PUM.DE";
-        public decimal InitialPrice { get; set; } = 22.75m;
+        public decimal InitialPrice { get; set; } = 23.23m;
         public int TargetVolume { get; set; } = 170000;
         public decimal CapitalLimit { get; set; } = 30000000m;
 

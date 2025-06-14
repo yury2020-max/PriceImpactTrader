@@ -19,17 +19,17 @@ StrategyConfig.cs - Configurable parameters and settings
 
 Trading Algorithm Phases
 
-Phase 1: Accumulation (30%) - Conservative volume with minimal market impact
-Phase 2: Trap Phase (10%) - Strategic pause to confuse other algorithms
-Phase 3: Impulse (30%) - Aggressive accumulation during momentum
-Phase 4: Exit Preparation (30%) - Gradual position adjustment
+Phase 1: Accumulation (30-40%) - Conservative volume with minimal market impact
+Phase 2: Stop Hunt - A quick sale of approximately 50% of the accumulated Phase 1 volume and then a quick buyback of shares, i.e. "unloading" retail traders by triggering their close stop orders.
+Phase 3: Impulse (60-70%) - Aggressive position gain until mass stop orders are triggered.
+Phase 4: Exit from position (100%) - the fastest possible exit during the triggering of mass stop orders, followed by a fairly quick closing of the remainder of the position when the market "slides" down.
 
 Quick Start
 Prerequisites
 
-.NET 8.0 SDK
+.NET 9.0 SDK
 Docker (optional, for containerized deployment)
-Python 3.8+ with uv (optional, for analysis)
+Python 3.13+ with uv (optional, for analysis)
 
 Running the Algorithm
 bash# Clone the repository
@@ -45,12 +45,15 @@ dotnet run config.json
 Configuration
 Modify config.json to adjust trading parameters:
 json{
-  "TargetVolume": 100000,
-  "MaxPriceImpact": 0.02,
-  "SimulationDuration": 300,
-  "InitialPrice": 22.75,
-  "BaseSpread": 0.01,
-  "VolatilityFactor": 0.005
+  "Instrument": "PUM.DE",
+  "InitialPrice": 23.23,
+  "TargetVolume": 170000,
+  "CapitalLimit": 30000000,
+  "EnableTrapPhase": true,
+  "TrapSellVolume": 20000,
+  "TrapDropPercent": 0.5,
+  "StopLossPercent": 3.0,
+  "PriceImpactPerShare": 0.000015
 }
 Analysis and Visualization
 Python Analysis Tools
@@ -58,7 +61,7 @@ The project includes sophisticated Python analysis tools for performance evaluat
 bash# Setup Python environment
 cd analysis
 uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\Activate
 uv pip install -r requirements.txt
 
 # Generate analysis charts
@@ -86,21 +89,6 @@ The Dockerfile uses multi-stage builds for optimized production images:
 Build stage: Uses .NET SDK for compilation
 Runtime stage: Lightweight runtime-only image
 
-Order Book Implementation
-Advanced order book features:
-
-Real-time matching engine with price-time priority
-Market and limit order execution
-Price impact simulation
-Liquidity depth modeling
-Spread calculation and monitoring
-
-csharpvar orderBook = new OrderBook(22.75m);
-var (avgPrice, executed) = orderBook.ExecuteMarketBuy(10000);
-orderBook.ApplyPriceImpact(0.01m);
-Performance Metrics
-The algorithm tracks and reports:
-
 Total Volume Executed - Actual vs. target volume
 Average Execution Price - VWAP analysis
 Market Impact - Price movement attribution
@@ -113,11 +101,11 @@ PriceImpactTrader/
 ├── Program.cs              # Entry point and orchestration
 ├── TradingStrategy.cs      # Core algorithm logic
 ├── MarketSimulator.cs      # Market environment simulation
-├── OrderBook.cs           # Order book and matching engine
-├── StrategyConfig.cs      # Configuration management
-├── config.json           # Default parameters
-├── Dockerfile            # Container deployment
-├── analysis/             # Python analysis tools
+├── OrderBook.cs            # Order book and matching engine
+├── StrategyConfig.cs       # Configuration management
+├── config.json             # Default parameters
+├── Dockerfile              # Container deployment
+├── analysis/               # Python analysis tools
 │   ├── chart_generator.py
 │   ├── requirements.txt
 │   └── .venv/
@@ -133,35 +121,44 @@ dotnet build --configuration Release
 docker build -t test-image .
 Sample Output
 === PRICE IMPACT TRADING ALGORITHM ===
-Target Volume: 100,000 shares
-Initial Price: €22.75
+Target Volume: 170,000 shares
+Initial Price: €23.23
 
-Phase 1 (Accumulation): Executed 30,000 shares at avg €22.76
-Phase 2 (Trap): Executed 10,000 shares at avg €22.77  
-Phase 3 (Impulse): Executed 30,000 shares at avg €22.79
-Phase 4 (Exit Prep): Executed 30,000 shares at avg €22.81
+Phase 1 (Accumulation): Executed 68,000 shares at avg €23.36
+Phase 2 (Trap): SELL 34,000 shares at avg €23.14  and BUY 34000 shares at avg €22.96
+Phase 3 (Impulse): Executed 100,000 shares at avg €24.14
+Phase 4 (Exit Prep): Executed 168,000 shares at avg €24.67
 
-Total Executed: 100,000 shares
-VWAP: €22.78
-Market Impact: +0.26% (+€0.06)
-Algorithm Efficiency: 94.2%
-Key Features
+=== TRADING SUMMARY ===
+Total Shares Bought: 202,000
+Total Shares Sold (regular): 152,000
+Stop Order Sales: 50,000
+Total Shares Sold (all): 202,000
+Net Position: 0 shares
+Average Buy Price: 23.7069
+Average Sell Price: 24.6363
+Total Money Spent: 4788797.22 EUR
+Total Money Received: 4976523.41 EUR
+  - Regular Sales: 3698454.64 EUR
+  - Stop Order Sales: 1278068.76 EUR
+Net P&L: 187726.19 EUR
+Final VWAP: 23.71
+Position fully liquidated - No unrealized P&L
 
-Realistic Market Simulation - Authentic price movements and liquidity
-Advanced Order Book - Full depth-of-market implementation
-Configurable Parameters - Flexible strategy customization
-Performance Analytics - Comprehensive reporting and visualization
-Docker Ready - Production deployment capabilities
-Multi-language Analysis - C# execution + Python analytics
+Relatively simplified market modeling — authentic price movements and liquidity
+Customizable parameters — flexible strategy customization
+Performance analytics — comprehensive reporting and visualization
+Docker Ready — production deployment capabilities
+Multilingual analysis — C# execution + Python analytics
 
 Algorithm Insights
-Market Impact Minimization
 The algorithm employs several techniques to reduce market impact:
 
 Volume Fragmentation - Spreads large orders across time
 Timing Diversification - Varies execution intervals
 Adaptive Sizing - Adjusts to market conditions
 Stealth Mode - Includes deceptive pauses
+Create false moves
 
 Risk Management
 
