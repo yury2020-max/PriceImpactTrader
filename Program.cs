@@ -46,12 +46,7 @@ namespace PriceImpactTrader
             catch (Exception ex)
             {
                 Console.WriteLine($"Error: {ex.Message}");
-                Console.WriteLine("Press any key to exit...");
-                //Console.ReadKey();
-                //if (Environment.GetEnvironmentVariable("DOCKER_ENV") != "true")
-                //{
-                //    Console.ReadKey();
-               // }
+                Console.WriteLine("Press any key to exit...");                
             }
         }
     }

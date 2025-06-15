@@ -41,7 +41,6 @@ COPY config.json .
 
 # Make sure Python venv is in PATH
 ENV PATH="/app/.venv/bin:$PATH"
-ENV DOCKER_ENV=true
 
 # Set entrypoint
 ENTRYPOINT ["dotnet", "PriceImpactTrader.dll"]
