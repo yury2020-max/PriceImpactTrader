@@ -44,9 +44,21 @@ def create_price_volume_chart(csv_file_path='price_history.csv'):
     plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45)
 
     plt.tight_layout()
-    plt.savefig('price_volume_analysis.png', dpi=300, bbox_inches='tight')
+    #plt.savefig('price_volume_analysis.png', dpi=300, bbox_inches='tight')
+    #plt.show()
+    #print("Chart saved as 'price_volume_analysis.png'")
+
+    # Создать папку charts если её нет
+    charts_dir = 'charts'
+    if not os.path.exists(charts_dir):
+        os.makedirs(charts_dir)
+    
+    # Сохранить в папку charts
+    output_path = os.path.join(charts_dir, 'price_volume_analysis.png')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.show()
-    print("Chart saved as 'price_volume_analysis.png'")
+    print(f"Chart saved as '{output_path}'")
+
 
 def generate_volume_from_price_changes(prices):
     """
@@ -133,11 +145,9 @@ def analyze_trading_performance(csv_file_path='price_history.csv'):
 if __name__ == "__main__":
     import os
     
-    create_price_volume_chart('price_history.csv')
-    
-    print("=== Диагностика ===")
-    print(f"Текущая папка: {os.getcwd()}")
-    
+    print("=== Diagnosis ===")
+    print(f"Current folder: {os.getcwd()}")
+
     # Looking for the file in different places
     csv_paths = [
         'price_history.csv',           # In the current folder
@@ -162,7 +172,7 @@ if __name__ == "__main__":
 
     try:
         print("\nCreating price and volume chart...")
-        create_price_volume_chart(csv_file)
+        create_price_volume_chart(csv_file)  
 
         print("\nAnalyzing performance...")
         analyze_trading_performance(csv_file)

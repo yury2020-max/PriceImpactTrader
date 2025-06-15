@@ -23,18 +23,25 @@ RUN apt-get update && \
 # Create Python virtual environment
 RUN python3 -m venv /app/.venv
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Copy requirements from analysis folder
+COPY analysis/requirements.txt .
 RUN /app/.venv/bin/pip install --no-cache-dir -r requirements.txt
 
 # Copy published app
 COPY --from=build /app/build .
+
+# Copy analysis folder
+COPY analysis/ ./analysis/
+
+# Copy CSV file - ЭТО ДОБАВЬТЕ!
+COPY price_history.csv .
 
 # Copy default config
 COPY config.json .
 
 # Make sure Python venv is in PATH
 ENV PATH="/app/.venv/bin:$PATH"
+ENV DOCKER_ENV=true
 
 # Set entrypoint
 ENTRYPOINT ["dotnet", "PriceImpactTrader.dll"]
